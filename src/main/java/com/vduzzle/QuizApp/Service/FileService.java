@@ -38,10 +38,10 @@ public class FileService implements IFileService {
     @PostConstruct
     public void initS3Client() {
         BasicAWSCredentials awsCredentials = new BasicAWSCredentials(accessKey, secretKey);
-        this.amazonS3Client = AmazonS3ClientBuilder.standard()
-                .withCredentials(new AWSStaticCredentialsProvider(awsCredentials))
-                .withRegion(Regions.EU_NORTH_1)
-                .build();
+//        this.amazonS3Client = AmazonS3ClientBuilder.standard()
+//                .withCredentials(new AWSStaticCredentialsProvider(awsCredentials))
+//                .withRegion(Regions.EU_NORTH_1)
+//                .build();
     }
 
     @Override
