@@ -6,7 +6,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.Getter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -14,6 +17,33 @@ public class QuizManager {
 
     private static Map<String, QuizSession> activeQuizzes = new HashMap<>();
     private Connection connection;
+
+    @Value("${spring.datasource.url}")
+    private String dbUrl;
+    @Value("${spring.datasource.username}")
+    private String dbUsername;
+    @Value("${spring.datasource.password}")
+    private String dbPassword;
+
+    @PostConstruct
+    public void init() {
+        try {
+            connection = DriverManager.getConnection(dbUrl, dbUsername, dbPassword);
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to connect to the database", e);
+        }
+    }
+
+    @PreDestroy
+    public void cleanup() {
+        if (connection != null) {
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                // log error
+            }
+        }
+    }
 
     public void setNextQuestionID(String quizCode) {
         QuizSession session = activeQuizzes.get(quizCode);
@@ -28,14 +58,6 @@ public class QuizManager {
             return session.getCurrentQuestionIndex();
         }
         return 0;
-    }
-
-    public QuizManager() {
-        try {
-            connection = DriverManager.getConnection("jdbc:postgresql://localhost:5432/quiz_app", "testuser", "asd");
-        } catch (SQLException e) {
-            throw new RuntimeException("Failed to connect to the database", e);
-        }
     }
 
     /**
