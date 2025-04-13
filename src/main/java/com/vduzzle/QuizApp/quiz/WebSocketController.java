@@ -80,7 +80,9 @@ public class WebSocketController {
             int currentIndex = quizManager.getNextQuestionID(quizCode);
             if(currentIndex>currentQuestion.length-1) {
                 quizManager.endQuiz(quizCode);
+                messagingTemplate.convertAndSend("/topic/quiz/" + quizCode + "/end", "");
             } else {
+                quizManager.setNextQuestionID(quizCode);
                 Question questionData = new Question(
                         currentQuestion[currentIndex],
                         possibleAnswers[currentIndex],
@@ -101,9 +103,10 @@ public class WebSocketController {
             System.out.println("jelenlegi kerdesre a helyes valasz: "+correctAnswers[currentIndex]);
             messagingTemplate.convertAndSend("/topic/quiz/" + quizCode + "/answers", correctAnswers[currentIndex]);
             if(quizManager.getNextQuestionID(quizCode)<=correctAnswers.length) {
-                quizManager.setNextQuestionID(quizCode);
+//                quizManager.setNextQuestionID(quizCode);
             } else {
                 quizManager.endQuiz(quizCode);
+                messagingTemplate.convertAndSend("/topic/quiz/" + quizCode + "/end", "");
             }
         }
     }
