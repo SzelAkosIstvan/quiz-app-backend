@@ -71,7 +71,7 @@ public class WebSocketController {
     }
 
     @MessageMapping("/next-question")
-    public void nextQuestion(String quizCode) {
+    public void nextQuestion(@Payload String quizCode) {
         QuizManager.QuizSession session = quizManager.getQuizSession(quizCode);
         if (session != null) {
             String[] currentQuestion = {"Test question hardcoded, if you see this, something is wrong", "Masodik kerdes", "Harmadik kerdes megint hosszu, hogy jol lehessen tesztelni", "negyedik teszt kerdes kozepes", "Otodik eddig kimaradt" ,"utolso csumi csumi"};

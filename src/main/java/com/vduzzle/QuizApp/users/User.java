@@ -37,8 +37,8 @@ public class User {
         }
     }
 
-    public void setImage(String image) {
-        if (userID == null || userID.trim().isEmpty()) {
+    public void setImage(String updatedUserID, String image) {
+        if (updatedUserID == null || updatedUserID.trim().isEmpty()) {
             throw new IllegalArgumentException("User ID cannot be null or empty");
         }
         this.image = image.trim();
@@ -46,10 +46,10 @@ public class User {
             String query = "UPDATE users SET image = ? WHERE id = ?";
             try (PreparedStatement stmt = conn.prepareStatement(query)) {
                 stmt.setString(1, image.trim());
-                stmt.setString(2, userID);
+                stmt.setString(2, updatedUserID);
                 int rowsUpdated = stmt.executeUpdate();
                 if (rowsUpdated == 0) {
-                    throw new RuntimeException("No user found with ID: " + userID);
+                    throw new RuntimeException("No user found with ID: " + updatedUserID);
                 }
             }
         } catch (SQLException e) {

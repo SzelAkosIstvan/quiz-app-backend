@@ -3,6 +3,7 @@ package com.vduzzle.QuizApp.users;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vduzzle.QuizApp.util.TokenUtil;
 import io.jsonwebtoken.Claims;
+import lombok.Getter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,7 +13,6 @@ import java.util.Map;
 
 @RestController
 public class userController {
-    private String token;
     private User user;
 
     @PostMapping("/login")
@@ -29,6 +29,7 @@ public class userController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
 
+        String token;
         try {
             Map<String, Object> claims = new HashMap<>();
             claims.put("id", id);
@@ -57,22 +58,15 @@ public class userController {
                 return ResponseEntity.status(401).body("Missing token.");
             }
 
-            // Kinyerjük a tokent a fejlécből
             String token = authHeader.substring(7);
-
             Claims claims = TokenUtil.extractClaims(token);
+            String updatedUserID = (String) claims.get("id");
 
-            // Ha a token érvényes, frissítjük a profilképét
-//            String username = claims.getSubject(); // Felhasználónév kinyerése a tokenből
-//            System.out.println("Felhasználó: " + username + ", új profilkép: " + newAvatar);
-
-            // Itt mentheted az új profilképét az adatbázisba vagy más tárolóba
-            // Példa: userRepository.updateAvatar(username, newAvatar);
             ObjectMapper objectMapper = new ObjectMapper();
             Map<String, String> jsonMap = objectMapper.readValue(newAvatar, Map.class);
             String newImage = jsonMap.get("newImage");
 
-            user.setImage(newImage);
+            user.setImage(updatedUserID, newImage);
 
             return ResponseEntity.ok("Profilkép sikeresen frissítve.");
         }  catch (Exception e) {
@@ -81,17 +75,8 @@ public class userController {
 
     }
 
-    // Inner class to represent the request body   //heh, ezzel kezdj valamit
+    @Getter
     static class UserRequest {
         private String id;
-
-        // Getter and Setter
-        public String getId() {
-            return id;
-        }
-
-        public void setId(String id) {
-            this.id = id;
-        }
     }
 }
