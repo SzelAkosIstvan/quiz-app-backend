@@ -1,10 +1,7 @@
 package com.vduzzle.QuizApp.quiz;
 
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -16,7 +13,7 @@ import org.springframework.stereotype.Service;
 public class QuizManager {
 
     private static Map<String, QuizSession> activeQuizzes = new HashMap<>();
-    private Connection connection;
+    private static Connection connection;
 
     @Value("${spring.datasource.url}")
     private String dbUrl;
@@ -60,17 +57,11 @@ public class QuizManager {
         return 0;
     }
 
-    /**
-     * Új kvíz indítása.
-     */
     public static void startNewQuiz(String quizCode, String quizId, String teacherId) {
         activeQuizzes.put(quizCode, new QuizSession(quizId, teacherId));
         //itt hozd letre a kerdes es valaszokat
     }
 
-    /**
-     * Kvíz szüneteltetése.
-     */
     public void pauseQuiz(String quizCode) {
         QuizSession session = activeQuizzes.get(quizCode);
         if (session != null) {
@@ -86,9 +77,6 @@ public class QuizManager {
         }
     }
 
-    /**
-     * Kvíz befejezése.
-     */
     public void endQuiz(String quizCode) {
         QuizSession session = activeQuizzes.get(quizCode);
         if (session != null) {
@@ -97,77 +85,49 @@ public class QuizManager {
         }
     }
 
-    /**
-     * Kvíz állapotának lekérése.
-     */
     public QuizSession getQuizSession(String quizCode) {
         return activeQuizzes.get(quizCode);
     }
 
-    /**
-     * Kérdések lekérése egy kvízhez.
-     */
-    public List<Question> getQuestionsForQuiz(String quizId) {
-        List<Question> questions = new ArrayList<>();
-
-        String query = "SELECT QuestionID, Question, AnswerGroupID FROM questions WHERE QuizID::varchar = ?";
-        try (PreparedStatement stmt = connection.prepareStatement(query)) {
-            stmt.setString(1, quizId);
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                String questionId = rs.getString("QuestionID");
-                String questionText = rs.getString("Question");
-                String answerGroupId = rs.getString("AnswerGroupID");
-
-                // Lekéri a válaszokat is
-                List<Answer> answers = getAnswersForQuestion(answerGroupId);
-                questions.add(new Question(questionId, questionText, answers));
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException("Failed to fetch questions", e);
+    public String[] getQuizQuestions(String quizCode) {
+        QuizSession session = activeQuizzes.get(quizCode);
+        if (session != null) {
+            return session.getQuizquestions().toArray(new String[0]);
         }
-
-        return questions;
+        return new String[0];
     }
 
-    public Question getQuestion(String quizCode, String questionId) {
-        //valahogy vizsgalni kell, hogy a quizCodehoz tartozik e es hanyadik
-        return null;
-    }
-
-    /**
-     * Válaszok lekérése egy kérdéshez.
-     */
-    private List<Answer> getAnswersForQuestion(String answerGroupId) {
-        List<Answer> answers = new ArrayList<>();
-
-        String query = "SELECT Answer, Correct FROM answers WHERE AnswerGroupID = ?";
-        try (PreparedStatement stmt = connection.prepareStatement(query)) {
-            stmt.setString(1, answerGroupId);
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                String answerText = rs.getString("Answer");
-                boolean isCorrect = rs.getBoolean("Correct");
-                answers.add(new Answer(answerText, isCorrect));
+    public String[][] getQuizAnswers(String quizCode) {
+        QuizSession session = activeQuizzes.get(quizCode);
+        if (session != null) {
+            List<List<String>> answers = session.getQuizanswers();
+            String[][] result = new String[answers.size()][];
+            for (int i = 0; i < answers.size(); i++) {
+                List<String> innerList = answers.get(i);
+                result[i] = innerList.toArray(new String[0]);
             }
-        } catch (SQLException e) {
-            throw new RuntimeException("Failed to fetch answers", e);
+            return result;
         }
-
-        return answers;
+        return new String[0][];
     }
 
-    /**
-     * Kvíz session osztály.
-     */
+    public String[] getCorrectAnswers(String quizCode) {
+        QuizSession session = activeQuizzes.get(quizCode);
+        if (session != null) {
+            System.out.println(Arrays.toString(session.getQuizcorrectanswers().toArray(new String[0])));
+            return session.getQuizcorrectanswers().toArray(new String[0]);
+        }
+        return new String[0];
+    }
+
     public static class QuizSession {
         private String quizId;
         private String teacherId;
         private boolean isActive = true;
         private boolean isPaused = false;
-        private List<Question> questions;
+        private List<String> quizquestions;
+        private List<List<String>> quizanswers;
+        private List<String> quizcorrectanswers;
         @Getter
         private int currentQuestionIndex = 0;
 
@@ -178,7 +138,44 @@ public class QuizManager {
         public QuizSession(String quizId, String teacherId) {
             this.quizId = quizId;
             this.teacherId = teacherId;
-            this.questions = new ArrayList<>();
+            this.quizquestions = new ArrayList<>();
+            this.quizanswers = new ArrayList<>();
+            this.quizcorrectanswers = new ArrayList<>();
+            String answerGroupId = "";
+            String query2;
+            String query = "SELECT Question, AnswerGroupID FROM questions WHERE QuizID::varchar = ?";
+            try (PreparedStatement stmt = connection.prepareStatement(query)) {
+                stmt.setString(1, quizId);
+                ResultSet rs = stmt.executeQuery();
+
+                while (rs.next()) {
+                    String questionText = rs.getString("Question");
+                    answerGroupId = rs.getString("AnswerGroupID");
+                    quizquestions.add(questionText);
+
+                    query2 = "SELECT Answer, Correct FROM answers WHERE AnswerGroupID = ?";
+                    try (PreparedStatement stmt2 = connection.prepareStatement(query2)) {
+                        stmt2.setString(1, answerGroupId);
+                        ResultSet rs2 = stmt2.executeQuery();
+                        List<String> currentAnswers = new ArrayList<>();
+                        while (rs2.next()) {
+                            String answerText = rs2.getString("Answer");
+                            boolean isCorrectAns = rs2.getBoolean("Correct");
+                            currentAnswers.add(answerText);
+                            if (isCorrectAns) {
+                                quizcorrectanswers.add(answerText);
+                            }
+                        }
+                        quizanswers.add(currentAnswers);
+                    } catch (SQLException e) {
+                        throw new RuntimeException("Failed to fetch questions", e);
+                    }
+
+                }
+
+            } catch (SQLException e) {
+                throw new RuntimeException("Failed to fetch questions", e);
+            }
         }
 
         public void pause() {
@@ -209,60 +206,14 @@ public class QuizManager {
             return teacherId;
         }
 
-        public List<Question> getQuestions() {
-            return questions;
+        public List<String> getQuizquestions() {
+            return quizquestions;
         }
-
-        public void setQuestions(List<Question> questions) {
-            this.questions = questions;
+        public List<List<String>> getQuizanswers() {
+            return quizanswers;
         }
-    }
-
-    /**
-     * Kérdés osztály.
-     */
-    public static class Question {
-        private String questionId;
-        private String questionText;
-        private List<Answer> answers;
-
-        public Question(String questionId, String questionText, List<Answer> answers) {
-            this.questionId = questionId;
-            this.questionText = questionText;
-            this.answers = answers;
-        }
-
-        public String getQuestionId() {
-            return questionId;
-        }
-
-        public String getQuestionText() {
-            return questionText;
-        }
-
-        public List<Answer> getAnswers() {
-            return answers;
-        }
-    }
-
-    /**
-     * Válasz osztály.
-     */
-    public static class Answer {
-        private String answerText;
-        private boolean isCorrect;
-
-        public Answer(String answerText, boolean isCorrect) {
-            this.answerText = answerText;
-            this.isCorrect = isCorrect;
-        }
-
-        public String getAnswerText() {
-            return answerText;
-        }
-
-        public boolean isCorrect() {
-            return isCorrect;
+        public List<String> getQuizcorrectanswers() {
+            return quizcorrectanswers;
         }
     }
 }

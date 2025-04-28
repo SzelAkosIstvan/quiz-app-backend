@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -73,6 +74,50 @@ public class userController {
             return ResponseEntity.status(500).body("Hiba történt a profilkép frissítése során.");
         }
 
+    }
+
+    @PostMapping("/getMyQuizzes")
+    public ResponseEntity<?> getMyQuizzesList(@RequestHeader("Authorization") String authHeader)
+    {
+        try {
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(401).body("Missing token.");
+            }
+
+            String token = authHeader.substring(7);
+            Claims claims = TokenUtil.extractClaims(token);
+            String UserID = (String) claims.get("id");
+
+            //List<String> myQuizzes = user.getQuizList(updatedUserID);
+            List<Map<String, Integer>> myQuizzes = user.getQuizList(UserID);
+            return ResponseEntity.ok(myQuizzes);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Hiba történt a quizek lekérdezése során");
+        }
+    }
+
+    @PostMapping("/deleteQuiz")
+    public ResponseEntity<?> deleteThisQuiz(@RequestHeader("Authorization") String authHeader, @RequestBody String quiz)
+    {
+        try {
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(401).body("Missing token.");
+            }
+
+            String token = authHeader.substring(7);
+            Claims claims = TokenUtil.extractClaims(token);
+            String UserID = (String) claims.get("id");
+
+            user.deleteQuiz(UserID, quiz);
+
+            return ResponseEntity.ok("Quiz deleted");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Hiba történt a quiz törlése során");
+        }
     }
 
     @Getter

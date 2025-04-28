@@ -74,8 +74,13 @@ public class WebSocketController {
     public void nextQuestion(@Payload String quizCode) {
         QuizManager.QuizSession session = quizManager.getQuizSession(quizCode);
         if (session != null) {
-            String[] currentQuestion = {"Test question hardcoded, if you see this, something is wrong", "Masodik kerdes", "Harmadik kerdes megint hosszu, hogy jol lehessen tesztelni", "negyedik teszt kerdes kozepes", "Otodik eddig kimaradt" ,"utolso csumi csumi"};
-            String[][] possibleAnswers = {{"egy", "egy", "hat", "het"}, {"masodik k", "valasz 2", "valasz 3", "valasz 5"}, {""}, {"a", "b", "c", "d"}, {"hehe", "alma", "citrom", "korte"}, {"qwe", "asd", "kjg", "asd"}};
+
+            //itt csere es jo is lesz ++ torles az adatbazisbol es minden meg kellene legyen elvileg
+
+            String[] currentQuestion = quizManager.getQuizQuestions(quizCode);
+            String[][] possibleAnswers = quizManager.getQuizAnswers(quizCode);
+            //String[] currentQuestion = {"Test question hardcoded, if you see this, something is wrong", "Masodik kerdes", "Harmadik kerdes megint hosszu, hogy jol lehessen tesztelni", "negyedik teszt kerdes kozepes", "Otodik eddig kimaradt" ,"utolso csumi csumi"};
+            //String[][] possibleAnswers = {{"egy", "egy", "hat", "het"}, {"masodik k", "valasz 2", "valasz 3", "valasz 5"}, {""}, {"a", "b", "c", "d"}, {"hehe", "alma", "citrom", "korte"}, {"qwe", "asd", "kjg", "asd"}};
             String[] imgLinks = {"https://picsum.photos/600/400", "https://picsum.photos/602/402", "https://picsum.photos/604/404", "https://picsum.photos/600/400", "", ""};
             int currentIndex = quizManager.getNextQuestionID(quizCode);
             if(currentIndex>currentQuestion.length-1) {
@@ -98,8 +103,9 @@ public class WebSocketController {
     public void correctAnswer(String quizCode) {
         QuizManager.QuizSession session = quizManager.getQuizSession(quizCode);
         if (session != null) {
-            String[] correctAnswers = {"het", "masodik k", "23", "c", "alma", "asd"};
-            int currentIndex = quizManager.getNextQuestionID(quizCode);
+            //String[] correctAnswers = {"het", "masodik k", "23", "c", "alma", "asd"};
+            String[] correctAnswers = quizManager.getCorrectAnswers(quizCode);
+            int currentIndex = quizManager.getNextQuestionID(quizCode)-1;
             System.out.println("jelenlegi kerdesre a helyes valasz: "+correctAnswers[currentIndex]);
             messagingTemplate.convertAndSend("/topic/quiz/" + quizCode + "/answers", correctAnswers[currentIndex]);
             if(quizManager.getNextQuestionID(quizCode)<=correctAnswers.length) {
