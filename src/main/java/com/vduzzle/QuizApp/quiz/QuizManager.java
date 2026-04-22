@@ -120,6 +120,14 @@ public class QuizManager {
         return new String[0];
     }
 
+    public String[] getQuizImages(String quizCode) {
+        QuizSession session = activeQuizzes.get(quizCode);
+        if (session != null) {
+            return session.getQuizimageskeys().toArray(new String[0]);
+        }
+        return new String[0];
+    }
+
     public static class QuizSession {
         private String quizId;
         private String teacherId;
@@ -128,6 +136,7 @@ public class QuizManager {
         private List<String> quizquestions;
         private List<List<String>> quizanswers;
         private List<String> quizcorrectanswers;
+        private List<String> quizimageskeys = new LinkedList<>();
         @Getter
         private int currentQuestionIndex = 0;
 
@@ -143,15 +152,17 @@ public class QuizManager {
             this.quizcorrectanswers = new ArrayList<>();
             String answerGroupId = "";
             String query2;
-            String query = "SELECT Question, AnswerGroupID FROM questions WHERE QuizID::varchar = ?";
+            String query = "SELECT Question, AnswerGroupID, ImageKey FROM questions WHERE QuizID::varchar = ?";
             try (PreparedStatement stmt = connection.prepareStatement(query)) {
                 stmt.setString(1, quizId);
                 ResultSet rs = stmt.executeQuery();
 
                 while (rs.next()) {
                     String questionText = rs.getString("Question");
+                    String questionImageKey = rs.getString("ImageKey");
                     answerGroupId = rs.getString("AnswerGroupID");
                     quizquestions.add(questionText);
+                    quizimageskeys.add(questionImageKey);
 
                     query2 = "SELECT Answer, Correct FROM answers WHERE AnswerGroupID = ?";
                     try (PreparedStatement stmt2 = connection.prepareStatement(query2)) {
@@ -214,6 +225,10 @@ public class QuizManager {
         }
         public List<String> getQuizcorrectanswers() {
             return quizcorrectanswers;
+        }
+
+        public List<String> getQuizimageskeys() {
+            return quizimageskeys;
         }
     }
 }

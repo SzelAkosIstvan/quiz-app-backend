@@ -2,6 +2,8 @@ package com.vduzzle.QuizApp.controller;
 
 import com.vduzzle.QuizApp.config.DatabaseConfig;
 import com.vduzzle.QuizApp.quiz.NewQuiz;
+import com.vduzzle.QuizApp.util.TokenUtil;
+import io.jsonwebtoken.Claims;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.vduzzle.QuizApp.quiz.Question;
@@ -18,12 +20,13 @@ public class QuizController {
             @RequestHeader("Authorization") String authHeader,
             @RequestBody NewQuiz quizRequest) {
 
-        // 1. Validate Authorization header
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(401).body("Missing or invalid authorization token");
         }
 
         String token = authHeader.substring(7);
+        Claims claims = TokenUtil.extractClaims(token);
+        String UserID = (String) claims.get("id");
 
         try {
             // Validation for quiz data
@@ -40,15 +43,15 @@ public class QuizController {
                 // Modify validation for open questions
                 if (question.getType().equals("closed")) {
                     if (question.getQuestionText() == null || question.getQuestionText().trim().isEmpty()) {
-                        return ResponseEntity.badRequest().body("Closed questions must have a non-empty question text");
+                        return ResponseEntity.badRequest().body(Map.of("message","Closed questions must have a non-empty question text"));
                     }
 
                     if (question.getPossibleAnswers() == null || question.getPossibleAnswers().isEmpty()) {
-                        return ResponseEntity.badRequest().body("Closed questions must have possible answers");
+                        return ResponseEntity.badRequest().body(Map.of("message","Closed questions must have possible answers"));
                     }
 
                     if (question.getCorrectAnswer() == null || question.getCorrectAnswer().trim().isEmpty()) {
-                        return ResponseEntity.badRequest().body("Closed questions must have a correct answer");
+                        return ResponseEntity.badRequest().body(Map.of("message","Closed questions must have a correct answer"));
                     }
                 } else if (question.getType().equals("open")) {
                     if (question.getQuestionText() == null || question.getQuestionText().trim().isEmpty()) {
@@ -60,11 +63,7 @@ public class QuizController {
                     }
                 }
             }
-
-            // 5. Save to database
-            int quizId = saveQuizToDatabase(quizRequest, "IF8994252");
-
-            // 6. Return success response
+            int quizId = saveQuizToDatabase(quizRequest, UserID);
             return ResponseEntity.ok().body(Map.of(
                     "message", "Quiz created successfully",
                     "quizId", quizId
@@ -78,11 +77,8 @@ public class QuizController {
     private int saveQuizToDatabase(NewQuiz quiz, String userId) throws SQLException {
         try (Connection conn = DatabaseConfig.getStaticDataSource().getConnection()) {
             conn.setAutoCommit(false);
-
             int quizId = getNextQuizId(conn);
-
             try {
-                // 1. Insert quiz metadata
                 String quizQuery = "INSERT INTO quizzes (QuizName, CreatedBy) VALUES (?, ?)";
                 try (PreparedStatement quizStmt = conn.prepareStatement(quizQuery, Statement.RETURN_GENERATED_KEYS)) {
                     quizStmt.setString(1, quiz.getTitle());
@@ -98,11 +94,8 @@ public class QuizController {
                     }
                 }
 
-                // 2. Insert questions
-                String questionQuery = "INSERT INTO questions (QuizID, Question, AnswerGroupID) VALUES (?, ?, ?)";
-
+                String questionQuery = "INSERT INTO questions (QuizID, Question, AnswerGroupID, ImageKey) VALUES (?, ?, ?, ?)";
                 String answerQuery = "INSERT INTO answers (AnswerGroupID, Answer, Correct) VALUES (?, ?, ?)";
-
                 int questionId = 1;
                 for (Question question : quiz.getQuestions()) {
 
@@ -112,6 +105,7 @@ public class QuizController {
                         questionStmt.setInt(1, quizId);
                         questionStmt.setString(2, question.getQuestionText());
                         questionStmt.setString(3, answerGroupId);
+                        questionStmt.setString(4, question.getImageKey());
                         questionStmt.executeUpdate();
                     }
 

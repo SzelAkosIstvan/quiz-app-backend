@@ -7,19 +7,17 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.vduzzle.QuizApp.dbo.File;
-import com.vduzzle.QuizApp.repo.FileRepo;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
+import java.util.UUID;
 
 @Service
 public class FileService implements IFileService {
 
-    private final FileRepo fileRepo;
     private AmazonS3 amazonS3Client;
 
     @Value("${aws.s3.acces.key}")
@@ -31,54 +29,42 @@ public class FileService implements IFileService {
     @Value("${aws.s3.bucket.name}")
     private String bucketName;
 
-    public FileService(FileRepo fileRepo) {
-        this.fileRepo = fileRepo;
-    }
-
     @PostConstruct
     public void initS3Client() {
         BasicAWSCredentials awsCredentials = new BasicAWSCredentials(accessKey, secretKey);
-//        this.amazonS3Client = AmazonS3ClientBuilder.standard()
-//                .withCredentials(new AWSStaticCredentialsProvider(awsCredentials))
-//                .withRegion(Regions.EU_NORTH_1)
-//                .build();
+        this.amazonS3Client = AmazonS3ClientBuilder.standard()
+                .withCredentials(new AWSStaticCredentialsProvider(awsCredentials))
+                .withRegion(Regions.EU_NORTH_1)
+                .build();
     }
 
     @Override
-    public File saveFile(MultipartFile file, String name) {
-        String saveFilePath;
+    public String saveFile(MultipartFile file, String name) {
         try {
-            saveFilePath = saveFileToAWSS3Bucket(file);
+            return saveFileToAWSS3Bucket(file);
         } catch (Exception e) {
             throw new RuntimeException("Error uploading file to S3: " + e.getMessage());
         }
-        if (saveFilePath.isEmpty()) {
-            throw new RuntimeException("Failed to save file to AWS S3.");
-        }
-
-        File fileToSave = File.builder()
-                .path(saveFilePath)
-                .name(name)
-                .build();
-        return fileRepo.save(fileToSave);
     }
 
     @Override
-    public File loadCorrespondingImage(Long imageID) {
+    public byte[] loadCorrespondingImage(Long imageID) {
         return null;
-//        return fileRepo.findById(imageID);
+//        return fileRepo.findById(imageID).orElse(null);
     }
 
     private String saveFileToAWSS3Bucket(MultipartFile file) {
         try {
-            String fileName = file.getOriginalFilename();
+            String originalFileName = file.getOriginalFilename();
+            String extension = originalFileName.substring(originalFileName.lastIndexOf(".") + 1);
+            String fileName = "quiz-images/" + UUID.randomUUID().toString() + "." + extension;// file.getOriginalFilename();
             InputStream inputStream = file.getInputStream();
             ObjectMetadata objectMetadata = new ObjectMetadata();
             objectMetadata.setContentType(file.getContentType());
 
             PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, fileName, inputStream, objectMetadata);
             amazonS3Client.putObject(putObjectRequest);
-            return "https://"+bucketName+".s3.amazonaws.com/"+fileName;
+            return "https://"+bucketName+".s3.eu-north-1.amazonaws.com/"+fileName;
         } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException(e);

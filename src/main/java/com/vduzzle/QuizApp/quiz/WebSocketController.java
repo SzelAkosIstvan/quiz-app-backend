@@ -79,9 +79,10 @@ public class WebSocketController {
 
             String[] currentQuestion = quizManager.getQuizQuestions(quizCode);
             String[][] possibleAnswers = quizManager.getQuizAnswers(quizCode);
+            String[] imgLinks = quizManager.getQuizImages(quizCode);
             //String[] currentQuestion = {"Test question hardcoded, if you see this, something is wrong", "Masodik kerdes", "Harmadik kerdes megint hosszu, hogy jol lehessen tesztelni", "negyedik teszt kerdes kozepes", "Otodik eddig kimaradt" ,"utolso csumi csumi"};
             //String[][] possibleAnswers = {{"egy", "egy", "hat", "het"}, {"masodik k", "valasz 2", "valasz 3", "valasz 5"}, {""}, {"a", "b", "c", "d"}, {"hehe", "alma", "citrom", "korte"}, {"qwe", "asd", "kjg", "asd"}};
-            String[] imgLinks = {"https://picsum.photos/600/400", "https://picsum.photos/602/402", "https://picsum.photos/604/404", "https://picsum.photos/600/400", "", ""};
+            //String[] imgLinks = {"https://picsum.photos/600/400", "https://picsum.photos/602/402", "https://picsum.photos/604/404", "https://picsum.photos/600/400", "", ""};
             int currentIndex = quizManager.getNextQuestionID(quizCode);
             if(currentIndex>currentQuestion.length-1) {
                 quizManager.endQuiz(quizCode);

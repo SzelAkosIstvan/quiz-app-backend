@@ -17,6 +17,9 @@ public class Question {
     @JsonProperty("correctAnswer")
     private String correctAnswer = "";
 
+    @JsonProperty("imagekey")
+    private String imageKey;
+
     // Constructors
     public Question() {
         this.type = "closed";
@@ -57,6 +60,10 @@ public class Question {
     public void setCorrectAnswer(String correctAnswer) {
         this.correctAnswer = correctAnswer;
     }
+
+    public String getImageKey() {return imageKey;}
+
+    public void setImageKey(String imageKey) {this.imageKey = imageKey;}
 
     @Override
     public String toString() {
